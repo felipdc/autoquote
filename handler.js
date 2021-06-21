@@ -55,24 +55,9 @@ const getEc2Quote = (ec2Data) => {
   return svcIds;
 };
 
-const getAlbQuote = (elbData) => {
-  console.log(elbData);
-  const albCount = elbData.length;
-  const svcIds = [];
-  for (let i = 0; i < albCount; i += 1) {
-    svcIds.push('MS-LB-AW-01');
-  }
-  return svcIds;
-};
+const getAlbQuote = (elbData) => elbData.map(() => 'MS-LB-AW-01');
 
-const getNlbQuote = (elbData) => {
-  const nlbCount = elbData.length;
-  const svcIds = [];
-  for (let i = 0; i < nlbCount; i += 1) {
-    svcIds.push('MS-LB-AW-01');
-  }
-  return svcIds;
-};
+const getNlbQuote = (elbData) => elbData.map(() => 'MS-LB-AW-01');
 
 const getElastiCacheQuote = (elastiCacheData) => {
   const ecRedisCount = elastiCacheData.ConfiguraçãoElastiCacheForRedis.length;
@@ -84,32 +69,11 @@ const getElastiCacheQuote = (elastiCacheData) => {
   return svcIds;
 };
 
-const getDynamoDBQuote = (dynamoDBData) => {
-  const count = dynamoDBData.length;
-  const svcIds = [];
-  for (let i = 0; i < count; i += 1) {
-    svcIds.push('MS-DB-DY-01');
-  }
-  return svcIds;
-};
+const getDynamoDBQuote = (dynamoDBData) => dynamoDBData.map(() => 'MS-DB-DY-01');
 
-const getS3Quote = (s3Data) => {
-  const count = s3Data.ConfiguraçãoBucket2.length;
-  const svcIds = [];
-  for (let i = 0; i < count; i += 1) {
-    svcIds.push('MS-AW-S3-01');
-  }
-  return svcIds;
-};
+const getS3Quote = (s3Data) => s3Data.ConfiguraçãoBucket2.map(() => 'MS-AW-S3-01');
 
-const getLambdaQuote = (lambdaData) => {
-  const count = lambdaData.ConfiguraçãoDaFunção.length;
-  const svcIds = [];
-  for (let i = 0; i < count; i += 1) {
-    svcIds.push('MS-SL-01');
-  }
-  return svcIds;
-};
+const getLambdaQuote = (lambdaData) => lambdaData.ConfiguraçãoDaFunção.map(() => 'MS-SL-01');
 
 const getAPIGatewayQuote = (apiGwData) => {
   const svcIds = apiGwData.ConfiguraçãoAPIGateway.map((apigw) => {
@@ -124,6 +88,12 @@ const getAPIGatewayQuote = (apiGwData) => {
   });
   return svcIds;
 };
+
+const getCloudFrontQuote = (cfData) => cfData.map(() => 'MS-AW-CF-01');
+
+const getSnsQuote = (snsData) => snsData.ConfiguraçãoDoTópico.map(() => 'MS-SQS-01');
+
+const getSqsQuote = (sqsData) => sqsData.ConfiguraçãoDaFila.map(() => 'MS-SQS-01');
 
 const servicesMap = {
   EC2: {
@@ -147,8 +117,14 @@ const servicesMap = {
     path: technicalRequirements.APIGateway,
     quoteFunc: getAPIGatewayQuote,
   },
-  // SNS: technicalRequirements.SNS,
-  // SQS: technicalRequirements.SQS,
+  SNS: {
+    path: technicalRequirements.SNS,
+    quoteFunc: getSnsQuote,
+  },
+  SQS: {
+    path: technicalRequirements.SQS,
+    quoteFunc: getSqsQuote,
+  },
   // RDS: technicalRequirements.RDS,
   // EKS: technicalRequirements.ElasticKubernetesServiceEKS,
   // 'Auto Scaling': technicalRequirements.AutoScaling2,
@@ -161,10 +137,15 @@ const servicesMap = {
     path: technicalRequirements.ElasticLoadBalancer.ConfiguraçãoApplicationLoadBalancer,
     quoteFunc: getAlbQuote,
   },
-  // 'Network Load Balancer': technicalRequirements.ElasticLoadBalancer
-  // ConfiguaçãoNetworkLoadBalancer,
+  'Network Load Balancer': {
+    path: technicalRequirements.ElasticLoadBalancer.ConfiguraçãoNetworkLoadBalancer,
+    quoteFunc: getNlbQuote,
+  },
   // 'URLs/Route53': technicalRequirements.URLsRoute53,
-  // CloudFront: technicalRequirements.CloudFront,
+  CloudFront: {
+    path: technicalRequirements.CloudFront.Origens,
+    quoteFunc: getCloudFrontQuote,
+  },
 };
 
 const services = [
@@ -173,7 +154,7 @@ const services = [
   'S3',
   // 'ECS',
   'API Gateway',
-  // 'SNS',
+  'SNS',
   // 'SQS',
   // 'RDS',
   // 'EKS',
@@ -182,7 +163,7 @@ const services = [
   // 'Deployment',
   // 'Application Load Balancer',
   // 'URLs/Route53',
-  // 'CloudFront',
+  'CloudFront',
 ];
 
 const getQuote = services.map(
