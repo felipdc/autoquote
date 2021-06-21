@@ -1,11 +1,16 @@
 /* eslint-disable no-console */
 const fs = require('fs');
+const _ = require('lodash');
 
 const raw = fs.readFileSync('sample.json');
 const data = JSON.parse(raw);
 
 const rawIntances = fs.readFileSync('new_instance_sizes.json');
 const instancesData = JSON.parse(rawIntances);
+
+const technicalRequirements = data.body['_2LevantamentoTécnico'].WorkloadWebAmazonWebServices;
+
+// const services = technicalRequirements.ServiçosASeremUtilizados;
 
 const getInstanceSize = (instanceParams) => {
   let instanceSize = 1;
@@ -50,18 +55,137 @@ const getEc2Quote = (ec2Data) => {
   return svcIds;
 };
 
-const getElbQuote = (elbData) => {
-  const albCount = elbData.ConfiguraçãoApplicationLoadBalancer.length;
-  const nlbCount = elbData.ConfiguaçãoNetworkLoadBalancer.length;
+const getAlbQuote = (elbData) => {
+  console.log(elbData);
+  const albCount = elbData.length;
   const svcIds = [];
-  for (let i = 0; i < albCount + nlbCount; i += 1) {
+  for (let i = 0; i < albCount; i += 1) {
     svcIds.push('MS-LB-AW-01');
   }
   return svcIds;
 };
 
-const ec2Quote = getEc2Quote(data.body['_2LevantamentoTécnico'].WorkloadWebAmazonWebServices.EC2.ConfiguraçãoEC2);
-const elbQuote = getElbQuote(data.body['_2LevantamentoTécnico'].WorkloadWebAmazonWebServices.ElasticLoadBalancer);
+const getNlbQuote = (elbData) => {
+  const nlbCount = elbData.length;
+  const svcIds = [];
+  for (let i = 0; i < nlbCount; i += 1) {
+    svcIds.push('MS-LB-AW-01');
+  }
+  return svcIds;
+};
 
-console.log(ec2Quote);
-console.log(elbQuote);
+const getElastiCacheQuote = (elastiCacheData) => {
+  const ecRedisCount = elastiCacheData.ConfiguraçãoElastiCacheForRedis.length;
+  const ecMcCount = elastiCacheData.ConfiguraçãoElastiCacheForMemCached.length;
+  const svcIds = [];
+  for (let i = 0; i < ecRedisCount + ecMcCount; i += 1) {
+    svcIds.push('MS-DB-EC-01');
+  }
+  return svcIds;
+};
+
+const getDynamoDBQuote = (dynamoDBData) => {
+  const count = dynamoDBData.length;
+  const svcIds = [];
+  for (let i = 0; i < count; i += 1) {
+    svcIds.push('MS-DB-DY-01');
+  }
+  return svcIds;
+};
+
+const getS3Quote = (s3Data) => {
+  const count = s3Data.ConfiguraçãoBucket2.length;
+  const svcIds = [];
+  for (let i = 0; i < count; i += 1) {
+    svcIds.push('MS-AW-S3-01');
+  }
+  return svcIds;
+};
+
+const getLambdaQuote = (lambdaData) => {
+  const count = lambdaData.ConfiguraçãoDaFunção.length;
+  const svcIds = [];
+  for (let i = 0; i < count; i += 1) {
+    svcIds.push('MS-SL-01');
+  }
+  return svcIds;
+};
+
+const getAPIGatewayQuote = (apiGwData) => {
+  const svcIds = apiGwData.ConfiguraçãoAPIGateway.map((apigw) => {
+    let size = 1;
+    if (apigw.NúmeroDeEndpoints >= 10) {
+      size = 2;
+    }
+    if (apigw.NúmeroDeEndpoints >= 50) {
+      size = 3;
+    }
+    return `MS-APIGW-0${size}`;
+  });
+  return svcIds;
+};
+
+const servicesMap = {
+  EC2: {
+    path: technicalRequirements.EC2.ConfiguraçãoEC2,
+    quoteFunc: getEc2Quote,
+  },
+  ElastiCache: {
+    path: technicalRequirements.Elasticache,
+    quoteFunc: getElastiCacheQuote,
+  },
+  DynamoDB: {
+    path: technicalRequirements.BancoDeDadosNoSQL.DynamoDB.ConfiguraçãoDynamoDB,
+    quoteFunc: getDynamoDBQuote,
+  },
+  S3: {
+    path: technicalRequirements.S3,
+    quoteFunc: getS3Quote,
+  },
+  // ECS: technicalRequirements.ECS,
+  'API Gateway': {
+    path: technicalRequirements.APIGateway,
+    quoteFunc: getAPIGatewayQuote,
+  },
+  // SNS: technicalRequirements.SNS,
+  // SQS: technicalRequirements.SQS,
+  // RDS: technicalRequirements.RDS,
+  // EKS: technicalRequirements.ElasticKubernetesServiceEKS,
+  // 'Auto Scaling': technicalRequirements.AutoScaling2,
+  Lambda: {
+    path: technicalRequirements.Lambda,
+    quoteFunc: getLambdaQuote,
+  },
+  // Deployment: technicalRequirements.Deployment,
+  'Application Load Balancer': {
+    path: technicalRequirements.ElasticLoadBalancer.ConfiguraçãoApplicationLoadBalancer,
+    quoteFunc: getAlbQuote,
+  },
+  // 'Network Load Balancer': technicalRequirements.ElasticLoadBalancer
+  // ConfiguaçãoNetworkLoadBalancer,
+  // 'URLs/Route53': technicalRequirements.URLsRoute53,
+  // CloudFront: technicalRequirements.CloudFront,
+};
+
+const services = [
+  'EC2',
+  'DynamoDB',
+  'S3',
+  // 'ECS',
+  'API Gateway',
+  // 'SNS',
+  // 'SQS',
+  // 'RDS',
+  // 'EKS',
+  // 'Auto Scaling',
+  'Lambda',
+  // 'Deployment',
+  // 'Application Load Balancer',
+  // 'URLs/Route53',
+  // 'CloudFront',
+];
+
+const getQuote = services.map(
+  (service) => servicesMap[service].quoteFunc(servicesMap[service].path),
+);
+console.log(_.flatten(getQuote));
